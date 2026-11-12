@@ -49,6 +49,9 @@ export interface ReportSignatoryRecord {
   department: number | null;
   department_name?: string | null;
   department_shortname?: string | null;
+  affiliation_department: number | null;
+  affiliation_department_name?: string | null;
+  affiliation_department_shortname?: string | null;
   faculty: number | null;
   faculty_name?: string | null;
   faculty_shortname?: string | null;
@@ -70,6 +73,7 @@ export default function ReportSignatories() {
   const [departmentId, setDepartmentId] = useState("");
   const [facultyId, setFacultyId] = useState("");
   const [convenor, setConvenor] = useState<PersonForm>(EMPTY_PERSON);
+  const [convenorDepartmentId, setConvenorDepartmentId] = useState("");
   const [departmentHead, setDepartmentHead] = useState<PersonForm>(EMPTY_PERSON);
   const [dean, setDean] = useState<PersonForm>(EMPTY_PERSON);
   const [isLoading, setIsLoading] = useState(true);
@@ -146,6 +150,13 @@ export default function ReportSignatories() {
         ? { name: convenorRecord.name, designation: convenorRecord.designation }
         : EMPTY_PERSON,
     );
+    setConvenorDepartmentId(
+      String(
+        convenorRecord?.affiliation_department
+        || convenorRecord?.department
+        || departmentId,
+      ),
+    );
     setDepartmentHead(
       headRecord ? { name: headRecord.name, designation: headRecord.designation } : EMPTY_PERSON,
     );
@@ -161,7 +172,7 @@ export default function ReportSignatories() {
   }, [facultyId, records]);
 
   const saveDepartmentSignatories = async () => {
-    if (!departmentId || !convenor.name.trim() || !convenor.designation.trim()
+    if (!departmentId || !convenorDepartmentId || !convenor.name.trim() || !convenor.designation.trim()
       || !departmentHead.name.trim() || !departmentHead.designation.trim()) {
       toast.error("Complete both Convenor and Department Head details.");
       return;
@@ -174,6 +185,7 @@ export default function ReportSignatories() {
           name: convenor.name.trim(),
           designation: convenor.designation.trim(),
           department: Number(departmentId),
+          affiliation_department: Number(convenorDepartmentId),
           faculty: null,
         }),
         reportSignatoryAPI.save({
@@ -181,6 +193,7 @@ export default function ReportSignatories() {
           name: departmentHead.name.trim(),
           designation: departmentHead.designation.trim(),
           department: Number(departmentId),
+          affiliation_department: null,
           faculty: null,
         }),
       ]);
@@ -274,6 +287,24 @@ export default function ReportSignatories() {
                 value={convenor}
                 onChange={setConvenor}
               />
+              <div className="space-y-2 rounded-lg border border-blue-100 bg-blue-50/50 p-4">
+                <Label>Convenor's Department</Label>
+                <Select value={convenorDepartmentId} onValueChange={setConvenorDepartmentId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select the convenor's department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map((department) => (
+                      <SelectItem key={department.id} value={String(department.id)}>
+                        {department.department_shortname} — {department.department_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-500">
+                  This can differ from the result-sheet department selected above.
+                </p>
+              </div>
               <PersonFields
                 title="Department Head"
                 value={departmentHead}

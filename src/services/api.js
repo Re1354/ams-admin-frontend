@@ -590,7 +590,11 @@ export const usersAPI = {
   // Create user
   createUser: async (userData) => {
     try {
-      const response = await api.post('/api/users/create/', userData);
+      const response = await api.post('/api/users/create/', userData, {
+        headers: userData instanceof FormData
+          ? { 'Content-Type': 'multipart/form-data' }
+          : undefined,
+      });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -600,7 +604,11 @@ export const usersAPI = {
   // Update user
   updateUser: async (userId, userData) => {
     try {
-      const response = await api.put(`/api/users/${userId}/update/`, userData);
+      const response = await api.put(`/api/users/${userId}/update/`, userData, {
+        headers: userData instanceof FormData
+          ? { 'Content-Type': 'multipart/form-data' }
+          : undefined,
+      });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;

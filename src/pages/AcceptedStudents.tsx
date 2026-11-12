@@ -3,7 +3,6 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import {
   AlertTriangle,
-  ChevronDown,
   CheckCircle2,
   CheckSquare,
   Download,
@@ -34,11 +33,13 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Checkbox } from "../components/ui/checkbox";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../components/ui/dropdown-menu";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import {
@@ -115,6 +116,9 @@ interface ReportSignatoryRecord {
   name: string;
   designation: string;
   department: number | null;
+  affiliation_department?: number | null;
+  affiliation_department_name?: string | null;
+  affiliation_department_shortname?: string | null;
   faculty: number | null;
 }
 
@@ -355,6 +359,9 @@ const scaleColumnWidthsToPage = (
 };
 
 type ExportFormat = "pdf" | "excel";
+type ExportAdmissionFilter = "accepted" | "not_accepted" | "all";
+type ExportMarksSort = "high" | "low";
+type ExportDateMode = "all" | "single" | "range";
 
 interface AcceptedStudentsProps {
   // Cosmetic tab restriction: pass a subset to show only those tabs + their
@@ -433,6 +440,14 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
   const [reloadKey, setReloadKey] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [exportingFormat, setExportingFormat] = useState<ExportFormat | null>(null);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+  const [exportAdmissionFilter, setExportAdmissionFilter] = useState<ExportAdmissionFilter>("all");
+  const [exportMarksSort, setExportMarksSort] = useState<ExportMarksSort>("high");
+  const [exportDateMode, setExportDateMode] = useState<ExportDateMode>("all");
+  const [exportSpecificDate, setExportSpecificDate] = useState("");
+  const [exportStartDate, setExportStartDate] = useState("");
+  const [exportEndDate, setExportEndDate] = useState("");
+  const [exportGroupByDate, setExportGroupByDate] = useState(false);
   const [isReverting, setIsReverting] = useState(false);
   const [isAccepting, setIsAccepting] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
@@ -968,19 +983,10 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
     (activeTab === "selected" || activeTab === "accepted" || activeTab === "rejected");
   const canAcceptCurrentTab = !configurationMissing && hasWriteAccess && activeTab === "selected";
   const hasSelectedRows = selectedStudentIds.length > 0;
-  const exportResults = useMemo(
-    () =>
-      hasSelectedRows
-        ? visibleResults.filter((result) => selectedStudentIdSet.has(result.student))
-        : visibleResults,
-    [hasSelectedRows, selectedStudentIdSet, visibleResults],
-  );
-  const exportRows = useMemo(() => buildResultSheetRows(exportResults), [exportResults]);
   const isExportDisabled =
     configurationMissing ||
     isScopeLoading ||
     !selectedSemester ||
-    exportRows.length === 0 ||
     Boolean(exportingFormat);
   const allSelectedVisible =
     visibleResults.length > 0 &&
@@ -1036,12 +1042,18 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
     );
 
     if (convenor) {
+      const convenorDepartmentLine = convenor.affiliation_department_name
+        ? `Department of ${withoutRepeatedPrefix(
+            convenor.affiliation_department_name,
+            "Department",
+          )}`
+        : departmentLine;
       signatories.push({
         name: convenor.name,
         details: [
           `Convenor, Admission Test Committee, ${reportFaculty.faculty_shortname}`,
           convenor.designation,
-          departmentLine,
+          convenorDepartmentLine,
           "Daffodil International University",
         ],
       });
@@ -1073,9 +1085,49 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
     const titleSemester = formatSemesterLabel(selectedSemester)
       .toLowerCase()
       .replace(/\s+/g, "-");
-    const scope = hasSelectedRows ? "selected" : "page";
+    const scope = hasSelectedRows ? "selected" : "all";
 
-    return `admission-test-result-${titleSemester}-${activeTab}-${scope}`;
+    return `admission-test-result-${titleSemester}-${exportAdmissionFilter}-${scope}`;
+  };
+
+  const resultMatchesExportOptions = (result: AdmissionResult) => {
+    if (exportAdmissionFilter === "accepted" && !result.is_admitted) return false;
+    if (exportAdmissionFilter === "not_accepted" && result.is_admitted) return false;
+    if (exportDateMode !== "all") {
+      const taken = result.exam_taken_at ? new Date(result.exam_taken_at) : null;
+      if (!taken || Number.isNaN(taken.getTime())) return false;
+      const year = taken.getFullYear();
+      const month = String(taken.getMonth() + 1).padStart(2, "0");
+      const day = String(taken.getDate()).padStart(2, "0");
+      const takenDate = `${year}-${month}-${day}`;
+      if (exportDateMode === "single" && takenDate !== exportSpecificDate) return false;
+      if (exportDateMode === "range") {
+        if (exportStartDate && takenDate < exportStartDate) return false;
+        if (exportEndDate && takenDate > exportEndDate) return false;
+      }
+    }
+    return true;
+  };
+
+  const sortExportResults = (items: AdmissionResult[]) => [...items].sort((left, right) => {
+    const difference = Number(right.weighted_total_marks || 0) - Number(left.weighted_total_marks || 0);
+    return exportMarksSort === "high" ? difference : -difference;
+  });
+
+  // Keep the requested marks order exact while still starting a new table
+  // whenever the displayed mark denominators change.
+  const groupResultsForExport = (items: AdmissionResult[]) => {
+    const groups: ReturnType<typeof groupResultsByDenominators> = [];
+    for (const result of sortExportResults(items)) {
+      const nextGroup = groupResultsByDenominators([result])[0];
+      const previousGroup = groups[groups.length - 1];
+      if (previousGroup?.key === nextGroup.key) {
+        previousGroup.results.push(result);
+      } else {
+        groups.push(nextGroup);
+      }
+    }
+    return groups;
   };
 
   // Resolve which students to export. Manual checkbox selection wins; otherwise
@@ -1083,7 +1135,7 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
   // the applied N. This is what makes N / Today / filters count in exports.
   const resolveExportResults = async (): Promise<AdmissionResult[]> => {
     if (hasSelectedRows) {
-      return selectedTabResults;
+      return sortExportResults(selectedTabResults.filter(resultMatchesExportOptions));
     }
     if (!selectedSemester) {
       return [];
@@ -1091,25 +1143,95 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
     const response = await admissionResultsAPI.getAllResults({
       ...scopeQueryParams,
       semester: selectedSemester,
-      result_status: TAB_TO_STATUS[activeTab],
       search: appliedSearch || undefined,
-      ...resultQueryParams,
+      exam_type: examTypeFilter !== "all" ? examTypeFilter : undefined,
+      is_admitted:
+        exportAdmissionFilter === "all"
+          ? undefined
+          : exportAdmissionFilter === "accepted",
+      sort_by: "score",
+      order: exportMarksSort === "high" ? "desc" : "asc",
+      exam_taken_date:
+        exportDateMode === "single" && exportSpecificDate
+          ? exportSpecificDate
+          : undefined,
+      start_date: exportDateMode === "range" ? exportStartDate || undefined : undefined,
+      end_date: exportDateMode === "range" ? exportEndDate || undefined : undefined,
     });
     const all: AdmissionResult[] = response?.results || response?.data || [];
-    return parsedExportCount != null ? all.slice(0, parsedExportCount) : all;
+    const sorted = sortExportResults(all);
+    return parsedExportCount != null ? sorted.slice(0, parsedExportCount) : sorted;
+  };
+
+  const buildExportGroups = (exportData: AdmissionResult[]) => {
+    if (!exportGroupByDate) {
+      return groupResultsForExport(exportData).map((group) => ({
+        ...group,
+        dateLabel: "",
+        startsDate: false,
+      }));
+    }
+
+    const dateGroups = new Map<string, { label: string; results: AdmissionResult[] }>();
+    for (const result of exportData) {
+      const date = result.exam_taken_at ? new Date(result.exam_taken_at) : null;
+      const validDate = date && !Number.isNaN(date.getTime()) ? date : null;
+      const key = validDate
+        ? `${validDate.getFullYear()}-${String(validDate.getMonth() + 1).padStart(2, "0")}-${String(validDate.getDate()).padStart(2, "0")}`
+        : "no-date";
+      const label = validDate
+        ? validDate.toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })
+        : "Not Available";
+      const group = dateGroups.get(key) || { label, results: [] };
+      group.results.push(result);
+      dateGroups.set(key, group);
+    }
+
+    return Array.from(dateGroups.entries())
+      .sort(([left], [right]) => {
+        if (left === "no-date") return 1;
+        if (right === "no-date") return -1;
+        return right.localeCompare(left);
+      })
+      .flatMap(([, dateGroup]) =>
+        groupResultsForExport(dateGroup.results).map((group, index) => ({
+          ...group,
+          dateLabel: dateGroup.label,
+          startsDate: index === 0,
+        })),
+      );
+  };
+
+  const validateExportDates = () => {
+    if (exportDateMode === "single" && !exportSpecificDate) {
+      toast.error("Select a date for the export.");
+      return false;
+    }
+    if (exportDateMode === "range") {
+      if (!exportStartDate || !exportEndDate) {
+        toast.error("Select both the start and end dates for the export.");
+        return false;
+      }
+      if (exportStartDate > exportEndDate) {
+        toast.error("The start date cannot be after the end date.");
+        return false;
+      }
+    }
+    return true;
   };
 
   const exportPdf = async () => {
     if (isExportDisabled) {
       return;
     }
+    if (!validateExportDates()) return;
 
     setExportingFormat("pdf");
     try {
       const exportData = await resolveExportResults();
       // Cluster by denominators so students with different exam/viva totals or
       // HSC-vs-Diploma each get their own table (maxes live in the headers).
-      const groups = groupResultsByDenominators(exportData);
+      const groups = buildExportGroups(exportData);
       if (groups.length === 0) {
         toast.error("No students to export for the current filters.");
         return;
@@ -1126,15 +1248,12 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
       const tableTop = 174;
       const bottomMargin = 28;
       const groupGap = 16;
-      const activeStatusLabel = PRETTY_STATUS_LABELS[TAB_TO_STATUS[activeTab]];
-
       const drawHeader = () => {
         drawDiuPdfChrome(doc, {
           logoDataUrl,
           semester: selectedSemester,
           facultyName,
           departmentName,
-          rightLabel: activeStatusLabel,
         });
       };
 
@@ -1151,8 +1270,36 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
       // denominators live in the column headers, which repeat on page breaks.
       groups.forEach((group, groupIndex) => {
         const groupRows = buildResultSheetRows(group.results, { withDenominator: false });
-        const startY =
+        let startY =
           groupIndex === 0 ? tableTop : ((doc as any).lastAutoTable?.finalY ?? tableTop) + groupGap;
+        if (group.startsDate) {
+          const pageHeight = doc.internal.pageSize.getHeight();
+          if (startY > pageHeight - 100) {
+            doc.addPage();
+            drawHeader();
+            startY = tableTop;
+          }
+          doc.setFillColor(226, 232, 240);
+          doc.roundedRect(
+            marginX,
+            startY,
+            doc.internal.pageSize.getWidth() - marginX * 2,
+            20,
+            2,
+            2,
+            "F",
+          );
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(10);
+          doc.setTextColor(30, 41, 59);
+          doc.text(
+            group.dateLabel,
+            doc.internal.pageSize.getWidth() / 2,
+            startY + 14,
+            { align: "center" },
+          );
+          startY += 26;
+        }
         autoTable(doc, {
           startY,
           margin: {
@@ -1228,6 +1375,7 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
       }
 
       doc.save(`${getExportBaseName()}.pdf`);
+      setIsExportDialogOpen(false);
       toast.success("Result sheet PDF exported successfully");
     } catch (exportError: any) {
       console.error("Error exporting result sheet PDF:", exportError);
@@ -1241,23 +1389,29 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
     if (isExportDisabled) {
       return;
     }
+    if (!validateExportDates()) return;
 
     setExportingFormat("excel");
     try {
       const exportData = await resolveExportResults();
       // Same clustering as the PDF: one table per denominator group, stacked in
       // a single sheet with a caption row and a blank separator between them.
-      const groups = groupResultsByDenominators(exportData);
+      const groups = buildExportGroups(exportData);
       if (groups.length === 0) {
         toast.error("No students to export for the current filters.");
         return;
       }
       const XLSX = await import("xlsx");
       const sheetRows: (string | number)[][] = [];
+      const dateHeaderRows: number[] = [];
 
       groups.forEach((group, groupIndex) => {
         if (groupIndex > 0) {
           sheetRows.push([]); // blank separator between tables
+        }
+        if (group.startsDate) {
+          dateHeaderRows.push(sheetRows.length);
+          sheetRows.push([group.dateLabel]);
         }
         sheetRows.push(
           RESULT_SHEET_EXCEL_KEYS.map((key) => getColumnHeader(key, group.denominators)),
@@ -1269,6 +1423,19 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
       });
 
       const worksheet = XLSX.utils.aoa_to_sheet(sheetRows);
+      worksheet["!merges"] = dateHeaderRows.map((row) => ({
+        s: { r: row, c: 0 },
+        e: { r: row, c: RESULT_SHEET_EXCEL_KEYS.length - 1 },
+      }));
+      dateHeaderRows.forEach((row) => {
+        const cell = worksheet[XLSX.utils.encode_cell({ r: row, c: 0 })];
+        if (cell) {
+          cell.s = {
+            alignment: { horizontal: "center" },
+            font: { bold: true },
+          };
+        }
+      });
       worksheet["!cols"] = [
         { wch: 8 },   // SL
         { wch: 24 },  // Application Serial
@@ -1286,6 +1453,7 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Results");
       XLSX.writeFile(workbook, `${getExportBaseName()}.xlsx`);
+      setIsExportDialogOpen(false);
       toast.success("Result sheet Excel exported successfully");
     } catch (exportError: any) {
       console.error("Error exporting result sheet Excel:", exportError);
@@ -1873,46 +2041,22 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
                       )}
                       Reports
                     </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          size="sm"
-                          disabled={isExportDisabled}
-                          className="h-8 px-2.5 bg-gradient-to-r from-[#2E3094] to-[#4C51BF] hover:from-[#23257a] hover:to-[#4046a8]"
-                        >
-                          {exportingFormat ? (
-                            <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                          ) : (
-                            <Download className="w-4 h-4 mr-1.5" />
-                          )}
-                          Export
-                          <ChevronDown className="w-4 h-4 ml-1.5" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        align="end"
-                        className="bg-white shadow-lg border-slate-200 text-slate-900"
-                      >
-                        <DropdownMenuItem
-                          disabled={isExportDisabled}
-                          onSelect={() => {
-                            void exportPdf();
-                          }}
-                        >
-                          <FileText className="w-4 h-4" />
-                          PDF
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          disabled={isExportDisabled}
-                          onSelect={() => {
-                            void exportExcel();
-                          }}
-                        >
-                          <FileSpreadsheet className="w-4 h-4" />
-                          Excel (.xlsx)
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <Button
+                      size="sm"
+                      disabled={isExportDisabled}
+                      onClick={() => {
+                        setExportAdmissionFilter(activeTab === "accepted" ? "accepted" : "not_accepted");
+                        setIsExportDialogOpen(true);
+                      }}
+                      className="h-8 px-2.5 bg-gradient-to-r from-[#2E3094] to-[#4C51BF] hover:from-[#23257a] hover:to-[#4046a8]"
+                    >
+                      {exportingFormat ? (
+                        <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                      ) : (
+                        <Download className="w-4 h-4 mr-1.5" />
+                      )}
+                      Export
+                    </Button>
                 </div>
               </CardTitle>
             </CardHeader>
@@ -2084,6 +2228,132 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
           </Card>
         </>
       )}
+
+      <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Export Result Report</DialogTitle>
+            <DialogDescription>
+              Choose the candidates, marks order, and date layout for this export.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-5 py-2">
+            <div className="space-y-2">
+              <Label>Admission Status</Label>
+              <Select
+                value={exportAdmissionFilter}
+                onValueChange={(value: ExportAdmissionFilter) => setExportAdmissionFilter(value)}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="accepted">Accepted</SelectItem>
+                  <SelectItem value="not_accepted">Not Accepted</SelectItem>
+                  <SelectItem value="all">All Students</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Sort by Marks</Label>
+              <Select
+                value={exportMarksSort}
+                onValueChange={(value: ExportMarksSort) => setExportMarksSort(value)}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="high">Highest marks first</SelectItem>
+                  <SelectItem value="low">Lowest marks first</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Date Filter</Label>
+              <Select
+                value={exportDateMode}
+                onValueChange={(value: ExportDateMode) => {
+                  setExportDateMode(value);
+                  if (value !== "range") setExportGroupByDate(false);
+                }}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All dates (single list)</SelectItem>
+                  <SelectItem value="single">Single date</SelectItem>
+                  <SelectItem value="range">Date range</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {exportDateMode === "single" && (
+              <div className="space-y-2">
+                <Label htmlFor="export-specific-date">Date</Label>
+                <Input
+                  id="export-specific-date"
+                  type="date"
+                  value={exportSpecificDate}
+                  onChange={(event) => setExportSpecificDate(event.target.value)}
+                />
+              </div>
+            )}
+
+            {exportDateMode === "range" && (
+              <div className="space-y-3 rounded-lg border border-slate-200 p-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="export-start-date">Start Date</Label>
+                    <Input
+                      id="export-start-date"
+                      type="date"
+                      value={exportStartDate}
+                      onChange={(event) => setExportStartDate(event.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="export-end-date">End Date</Label>
+                    <Input
+                      id="export-end-date"
+                      type="date"
+                      value={exportEndDate}
+                      onChange={(event) => setExportEndDate(event.target.value)}
+                    />
+                  </div>
+                </div>
+                <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-700">
+                  <Checkbox
+                    checked={exportGroupByDate}
+                    onCheckedChange={(checked) => setExportGroupByDate(Boolean(checked))}
+                  />
+                  Group students under centered date headings
+                </label>
+              </div>
+            )}
+
+            {hasSelectedRows && (
+              <Alert className="border-blue-200 bg-blue-50">
+                <AlertDescription className="text-blue-900">
+                  The export will use the {selectedStudentIds.length} checked students, then apply these options.
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setIsExportDialogOpen(false)} disabled={Boolean(exportingFormat)}>
+              Cancel
+            </Button>
+            <Button variant="outline" onClick={() => void exportExcel()} disabled={Boolean(exportingFormat)}>
+              {exportingFormat === "excel" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-2 h-4 w-4" />}
+              Excel
+            </Button>
+            <Button onClick={() => void exportPdf()} disabled={Boolean(exportingFormat)} className="bg-[#2E3094] hover:bg-[#242677]">
+              {exportingFormat === "pdf" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
+              PDF
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <StudentAdmissionReportDialog
         open={isReportDialogOpen}

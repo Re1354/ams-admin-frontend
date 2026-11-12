@@ -23,6 +23,13 @@ interface User {
   id: number;
   username: string;
   email: string;
+  image?: string | null;
+  employee_id?: string | null;
+  full_name: string;
+  designation: string;
+  personal_email?: string | null;
+  university_email?: string | null;
+  contact: string;
   department: string;
   created_at: string;
   role_details: {
@@ -70,7 +77,13 @@ export function UsersManagement({ gradientClass }: UsersManagementProps) {
   // Form state
   const [formData, setFormData] = useState({
     username: '',
-    email: '',
+    image: null as File | null,
+    employee_id: '',
+    full_name: '',
+    designation: '',
+    personal_email: '',
+    university_email: '',
+    contact: '',
     password: '',
     role_id: 2,
     selected_faculty: 'ALL', // 'ALL' or faculty id string
@@ -210,9 +223,13 @@ export function UsersManagement({ gradientClass }: UsersManagementProps) {
       if (searchTerm.trim()) {
         const q = searchTerm.trim().toLowerCase();
         const matchesUsername = (user.username || '').toLowerCase().includes(q);
-        const matchesEmail = (user.email || '').toLowerCase().includes(q);
+        const matchesEmail = (user.university_email || user.email || '').toLowerCase().includes(q)
+          || (user.personal_email || '').toLowerCase().includes(q);
+        const matchesName = (user.full_name || '').toLowerCase().includes(q);
+        const matchesEmployeeId = (user.employee_id || '').toLowerCase().includes(q);
+        const matchesContact = (user.contact || '').toLowerCase().includes(q);
         const matchesId = user.id.toString().includes(q);
-        if (!matchesUsername && !matchesEmail && !matchesId) return false;
+        if (!matchesUsername && !matchesEmail && !matchesName && !matchesEmployeeId && !matchesContact && !matchesId) return false;
       }
       if (roleFilter !== 'ALL') {
         const userRoleId = user.role_details?.id?.toString();
@@ -257,7 +274,13 @@ export function UsersManagement({ gradientClass }: UsersManagementProps) {
     setEditingUser(null);
     setFormData({
       username: '',
-      email: '',
+      image: null,
+      employee_id: '',
+      full_name: '',
+      designation: '',
+      personal_email: '',
+      university_email: '',
+      contact: '',
       password: '',
       role_id: roles.length > 0 ? roles[0].id : 2,
       selected_faculty: 'ALL',
@@ -292,7 +315,13 @@ export function UsersManagement({ gradientClass }: UsersManagementProps) {
 
     setFormData({
       username: user.username,
-      email: user.email,
+      image: null,
+      employee_id: user.employee_id || '',
+      full_name: user.full_name || '',
+      designation: user.designation || '',
+      personal_email: user.personal_email || '',
+      university_email: user.university_email || user.email || '',
+      contact: user.contact || '',
       password: '',
       role_id: user.role_details.id,
       selected_faculty: initFaculty,
@@ -304,8 +333,8 @@ export function UsersManagement({ gradientClass }: UsersManagementProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.username.trim() || !formData.email.trim()) {
-      toast.error('Username and email are required');
+    if (!formData.username.trim() || !formData.full_name.trim() || !formData.university_email.trim()) {
+      toast.error('Username, full name, and university email are required');
       return;
     }
 
@@ -325,16 +354,23 @@ export function UsersManagement({ gradientClass }: UsersManagementProps) {
       const faculty_id = isGlobal ? null : parseInt(formData.selected_faculty);
       const department_id = isDepartmentScope ? parseInt(formData.selected_department) : null;
 
-      const payload: any = {
-        username: formData.username,
-        email: formData.email,
-        role_id: formData.role_id,
-        access_type,
-        is_global_access,
-        faculty_id,
-        department_id,
-        ...(formData.password.trim() ? { password: formData.password } : {})
-      };
+      const payload = new FormData();
+      payload.append('username', formData.username.trim());
+      payload.append('employee_id', formData.employee_id.trim());
+      payload.append('full_name', formData.full_name.trim());
+      payload.append('designation', formData.designation.trim());
+      payload.append('personal_email', formData.personal_email.trim());
+      payload.append('university_email', formData.university_email.trim());
+      payload.append('contact', formData.contact.trim());
+      payload.append('role_id', String(formData.role_id));
+      payload.append('access_type', access_type);
+      payload.append('is_global_access', String(is_global_access));
+      if (faculty_id !== null) payload.append('faculty_id', String(faculty_id));
+      else if (editingUser) payload.append('faculty_id', '0');
+      if (department_id !== null) payload.append('department_id', String(department_id));
+      else if (editingUser) payload.append('department_id', '0');
+      if (formData.password.trim()) payload.append('password', formData.password);
+      if (formData.image) payload.append('image', formData.image);
 
       if (editingUser) {
         await usersAPI.updateUser(editingUser.id, payload);
@@ -615,15 +651,24 @@ export function UsersManagement({ gradientClass }: UsersManagementProps) {
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-gradient-to-r from-[#2E3094] to-[#4C51BF] rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                            {user.username.charAt(0).toUpperCase()}
+                            {user.image ? (
+                              <img src={user.image} alt="" className="h-full w-full rounded-full object-cover" />
+                            ) : (
+                              (user.full_name || user.username).charAt(0).toUpperCase()
+                            )}
                           </div>
                           <div>
-                            <p className="font-medium text-gray-800">{user.username}</p>
-                            <p className="text-sm text-gray-500">ID: {user.id}</p>
+                            <p className="font-medium text-gray-800">{user.full_name || user.username}</p>
+                            <p className="text-sm text-gray-500">
+                              {user.employee_id ? `${user.employee_id} · ` : ''}@{user.username}
+                            </p>
                           </div>
                         </div>
                       </td>
-                      <td className="p-4 text-gray-700">{user.email}</td>
+                      <td className="p-4 text-gray-700">
+                        <p>{user.university_email || user.email}</p>
+                        {user.personal_email && <p className="text-xs text-gray-500">{user.personal_email}</p>}
+                      </td>
                       <td className="p-4">
                         <Badge 
                           variant={user.role_details?.role_name === 'superadmin' ? 'default' : 'secondary'}
@@ -727,7 +772,7 @@ export function UsersManagement({ gradientClass }: UsersManagementProps) {
 
       {/* User Dialog */}
       <Dialog open={showUserDialog} onOpenChange={setShowUserDialog}>
-        <DialogContent className="max-w-md mx-2 sm:mx-0">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto mx-2 sm:mx-0">
           <DialogHeader>
             <DialogTitle>
               {editingUser ? 'Edit User' : 'Create New User'}
@@ -737,6 +782,20 @@ export function UsersManagement({ gradientClass }: UsersManagementProps) {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="image">Profile Image</Label>
+              <Input
+                id="image"
+                type="file"
+                accept="image/*"
+                onChange={(e) => setFormData(prev => ({ ...prev, image: e.target.files?.[0] || null }))}
+                disabled={isSubmitting}
+              />
+              {editingUser?.image && !formData.image && (
+                <p className="text-xs text-gray-500">Leave blank to keep the current image.</p>
+              )}
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="username">Username</Label>
               <Input
@@ -750,15 +809,34 @@ export function UsersManagement({ gradientClass }: UsersManagementProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="employee_id">Employee ID</Label>
               <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                placeholder="Enter email address"
+                id="employee_id"
+                value={formData.employee_id}
+                onChange={(e) => setFormData(prev => ({ ...prev, employee_id: e.target.value }))}
+                placeholder="Enter employee ID"
                 disabled={isSubmitting}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="full_name">Full Name</Label>
+              <Input id="full_name" value={formData.full_name} onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))} placeholder="Enter full name" disabled={isSubmitting} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="designation">Designation</Label>
+              <Input id="designation" value={formData.designation} onChange={(e) => setFormData(prev => ({ ...prev, designation: e.target.value }))} placeholder="Enter designation" disabled={isSubmitting} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="personal_email">Personal E-mail</Label>
+              <Input id="personal_email" type="email" value={formData.personal_email} onChange={(e) => setFormData(prev => ({ ...prev, personal_email: e.target.value }))} placeholder="Personal email" disabled={isSubmitting} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="university_email">University E-mail</Label>
+              <Input id="university_email" type="email" value={formData.university_email} onChange={(e) => setFormData(prev => ({ ...prev, university_email: e.target.value }))} placeholder="University email" disabled={isSubmitting} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="contact">Contact</Label>
+              <Input id="contact" value={formData.contact} onChange={(e) => setFormData(prev => ({ ...prev, contact: e.target.value }))} placeholder="Contact number" disabled={isSubmitting} />
             </div>
 
             <div className="space-y-2">
@@ -784,6 +862,7 @@ export function UsersManagement({ gradientClass }: UsersManagementProps) {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+            </div>
             </div>
 
             <div className="space-y-2">

@@ -27,6 +27,13 @@ interface User {
   id: number;
   username: string;
   email: string;
+  image?: string | null;
+  employee_id?: string | null;
+  full_name?: string;
+  designation?: string;
+  personal_email?: string | null;
+  university_email?: string | null;
+  contact?: string;
   created_at: string;
   role_details: {
     id: number;
