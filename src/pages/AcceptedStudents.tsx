@@ -362,6 +362,7 @@ type ExportFormat = "pdf" | "excel";
 type ExportAdmissionFilter = "accepted" | "not_accepted" | "all";
 type ExportMarksSort = "high" | "low";
 type ExportDateMode = "all" | "single" | "range";
+type ExportDateSort = "asc" | "desc";
 
 interface AcceptedStudentsProps {
   // Cosmetic tab restriction: pass a subset to show only those tabs + their
@@ -441,8 +442,10 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
   const [isLoading, setIsLoading] = useState(false);
   const [exportingFormat, setExportingFormat] = useState<ExportFormat | null>(null);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+  const [exportSemester, setExportSemester] = useState("");
   const [exportAdmissionFilter, setExportAdmissionFilter] = useState<ExportAdmissionFilter>("all");
   const [exportMarksSort, setExportMarksSort] = useState<ExportMarksSort>("high");
+  const [exportDateSort, setExportDateSort] = useState<ExportDateSort>("desc");
   const [exportDateMode, setExportDateMode] = useState<ExportDateMode>("all");
   const [exportSpecificDate, setExportSpecificDate] = useState("");
   const [exportStartDate, setExportStartDate] = useState("");
@@ -991,17 +994,6 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
   const allSelectedVisible =
     visibleResults.length > 0 &&
     visibleResults.every((result) => selectedStudentIdSet.has(result.student));
-  const facultyName = selectedFaculty?.faculty_name
-    || (selectedFacultyIds.length > 0
-      ? selectedFaculties.map((faculty) => faculty.faculty_shortname).join(" / ")
-      : singleDepartment
-      ? resolveFacultyName({
-          exams: examRecords,
-          department: singleDepartment,
-          semester: selectedSemester,
-          resultExamIds: results.map((result) => result.exam),
-        })
-      : "All Faculties");
   const departmentName = singleDepartment?.department_name || departmentBoardLabel;
 
   const loadResultSheetSignatories = async (): Promise<ResultSheetSignatory[]> => {
@@ -1082,7 +1074,7 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
   };
 
   const getExportBaseName = () => {
-    const titleSemester = formatSemesterLabel(selectedSemester)
+    const titleSemester = formatSemesterLabel(exportSemester)
       .toLowerCase()
       .replace(/\s+/g, "-");
     const scope = hasSelectedRows ? "selected" : "all";
@@ -1110,8 +1102,24 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
   };
 
   const sortExportResults = (items: AdmissionResult[]) => [...items].sort((left, right) => {
-    const difference = Number(right.weighted_total_marks || 0) - Number(left.weighted_total_marks || 0);
-    return exportMarksSort === "high" ? difference : -difference;
+    const leftDate = left.exam_taken_at ? new Date(left.exam_taken_at).getTime() : Number.NaN;
+    const rightDate = right.exam_taken_at ? new Date(right.exam_taken_at).getTime() : Number.NaN;
+    const leftHasDate = Number.isFinite(leftDate);
+    const rightHasDate = Number.isFinite(rightDate);
+
+    // Records without an examination date always stay at the end. Otherwise,
+    // compare the real timestamps so July -> August -> September is genuinely
+    // chronological instead of relying on formatted date text.
+    if (leftHasDate !== rightHasDate) return leftHasDate ? -1 : 1;
+    if (leftHasDate && rightHasDate && leftDate !== rightDate) {
+      return exportDateSort === "asc" ? leftDate - rightDate : rightDate - leftDate;
+    }
+
+    const marksDifference = Number(right.weighted_total_marks || 0) - Number(left.weighted_total_marks || 0);
+    if (marksDifference !== 0) {
+      return exportMarksSort === "high" ? marksDifference : -marksDifference;
+    }
+    return Number(left.id || 0) - Number(right.id || 0);
   });
 
   // Keep the requested marks order exact while still starting a new table
@@ -1137,20 +1145,20 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
     if (hasSelectedRows) {
       return sortExportResults(selectedTabResults.filter(resultMatchesExportOptions));
     }
-    if (!selectedSemester) {
+    if (!exportSemester) {
       return [];
     }
     const response = await admissionResultsAPI.getAllResults({
       ...scopeQueryParams,
-      semester: selectedSemester,
+      semester: exportSemester,
       search: appliedSearch || undefined,
       exam_type: examTypeFilter !== "all" ? examTypeFilter : undefined,
       is_admitted:
         exportAdmissionFilter === "all"
           ? undefined
           : exportAdmissionFilter === "accepted",
-      sort_by: "score",
-      order: exportMarksSort === "high" ? "desc" : "asc",
+      sort_by: "date",
+      order: exportDateSort,
       exam_taken_date:
         exportDateMode === "single" && exportSpecificDate
           ? exportSpecificDate
@@ -1191,7 +1199,9 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
       .sort(([left], [right]) => {
         if (left === "no-date") return 1;
         if (right === "no-date") return -1;
-        return right.localeCompare(left);
+        return exportDateSort === "asc"
+          ? left.localeCompare(right)
+          : right.localeCompare(left);
       })
       .flatMap(([, dateGroup]) =>
         groupResultsForExport(dateGroup.results).map((group, index) => ({
@@ -1203,6 +1213,10 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
   };
 
   const validateExportDates = () => {
+    if (!exportSemester) {
+      toast.error("Select a semester for the export.");
+      return false;
+    }
     if (exportDateMode === "single" && !exportSpecificDate) {
       toast.error("Select a date for the export.");
       return false;
@@ -1238,6 +1252,17 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
       }
       const logoDataUrl = await loadDiuLogoDataUrl();
       const signatories = await loadResultSheetSignatories();
+      const exportFacultyName = selectedFaculty?.faculty_name
+        || (selectedFacultyIds.length > 0
+          ? selectedFaculties.map((faculty) => faculty.faculty_shortname).join(" / ")
+          : singleDepartment
+          ? resolveFacultyName({
+              exams: examRecords,
+              department: singleDepartment,
+              semester: exportSemester,
+              resultExamIds: exportData.map((result) => result.exam),
+            })
+          : "All Faculties");
       const doc = new jsPDF({
         orientation: "portrait",
         unit: "pt",
@@ -1251,8 +1276,8 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
       const drawHeader = () => {
         drawDiuPdfChrome(doc, {
           logoDataUrl,
-          semester: selectedSemester,
-          facultyName,
+          semester: exportSemester,
+          facultyName: exportFacultyName,
           departmentName,
         });
       };
@@ -2046,6 +2071,7 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
                       disabled={isExportDisabled}
                       onClick={() => {
                         setExportAdmissionFilter(activeTab === "accepted" ? "accepted" : "not_accepted");
+                        setExportSemester(selectedSemester);
                         setIsExportDialogOpen(true);
                       }}
                       className="h-8 px-2.5 bg-gradient-to-r from-[#2E3094] to-[#4C51BF] hover:from-[#23257a] hover:to-[#4046a8]"
@@ -2234,11 +2260,30 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
           <DialogHeader>
             <DialogTitle>Export Result Report</DialogTitle>
             <DialogDescription>
-              Choose the candidates, marks order, and date layout for this export.
+              Choose the semester, candidates, marks order, and date layout for this export.
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-5 py-2">
+            <div className="space-y-2">
+              <Label>Semester</Label>
+              <SemesterCombobox
+                value={exportSemester}
+                options={semesterOptions}
+                onChange={(semester) => {
+                  setExportSemester(semester);
+                  if (semester !== selectedSemester) {
+                    setSelectedStudentIds([]);
+                  }
+                }}
+                disabled={Boolean(exportingFormat) || semesterOptions.length === 0}
+                placeholder="Select export semester"
+              />
+              <p className="text-xs text-slate-500">
+                The PDF or Excel file will contain records from this semester only.
+              </p>
+            </div>
+
             <div className="space-y-2">
               <Label>Admission Status</Label>
               <Select
@@ -2264,6 +2309,21 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
                 <SelectContent>
                   <SelectItem value="high">Highest marks first</SelectItem>
                   <SelectItem value="low">Lowest marks first</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-slate-500">Used for students who took the exam at the same time.</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Sort by Examination Date</Label>
+              <Select
+                value={exportDateSort}
+                onValueChange={(value: ExportDateSort) => setExportDateSort(value)}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="asc">Oldest to newest (ascending)</SelectItem>
+                  <SelectItem value="desc">Newest to oldest (descending)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -2343,11 +2403,11 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
             <Button variant="outline" onClick={() => setIsExportDialogOpen(false)} disabled={Boolean(exportingFormat)}>
               Cancel
             </Button>
-            <Button variant="outline" onClick={() => void exportExcel()} disabled={Boolean(exportingFormat)}>
+            <Button variant="outline" onClick={() => void exportExcel()} disabled={Boolean(exportingFormat) || !exportSemester}>
               {exportingFormat === "excel" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-2 h-4 w-4" />}
               Excel
             </Button>
-            <Button onClick={() => void exportPdf()} disabled={Boolean(exportingFormat)} className="bg-[#2E3094] hover:bg-[#242677]">
+            <Button onClick={() => void exportPdf()} disabled={Boolean(exportingFormat) || !exportSemester} className="bg-[#2E3094] hover:bg-[#242677]">
               {exportingFormat === "pdf" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
               PDF
             </Button>

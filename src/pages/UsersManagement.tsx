@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Users, UserPlus, Edit, Trash2, Loader2, RefreshCw, Eye, EyeOff, Search, Filter, X, RotateCcw } from 'lucide-react';
 import { usersAPI, roleAPI, departmentAPI, facultyAPI, facultyDepartmentAPI } from '../services/api';
 import PaginationControls from '../components/PaginationControls';
+import { UserAvatar } from '../components/UserAvatar';
 import toast from 'react-hot-toast';
 
 interface FacultyDepartmentMapping {
@@ -650,13 +651,7 @@ export function UsersManagement({ gradientClass }: UsersManagementProps) {
                     <tr key={user.id} className="border-b hover:bg-gray-50 transition-colors">
                       <td className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-gradient-to-r from-[#2E3094] to-[#4C51BF] rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                            {user.image ? (
-                              <img src={user.image} alt="" className="h-full w-full rounded-full object-cover" />
-                            ) : (
-                              (user.full_name || user.username).charAt(0).toUpperCase()
-                            )}
-                          </div>
+                          <UserAvatar user={user} showInitial className="h-8 w-8 shrink-0" />
                           <div>
                             <p className="font-medium text-gray-800">{user.full_name || user.username}</p>
                             <p className="text-sm text-gray-500">

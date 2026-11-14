@@ -1,8 +1,9 @@
 ﻿import React from 'react';
-import { LogOut } from 'lucide-react';
+import { LogOut, UserRoundPen } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useMenu, iconMap } from '../contexts/MenuContext';
 import { Button } from './ui/button';
+import { UserAvatar } from './UserAvatar';
 // @ts-ignore
 import logoImage from '../assets/logo.png';
 import toast from 'react-hot-toast';
@@ -202,15 +203,28 @@ export function AppSidebar() {
         <SidebarGroup className="mt-auto">
           <SidebarGroupContent>
             <div className="px-3 py-4 border-t border-gray-200">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-8 bg-gradient-to-r from-[#2E3094] to-[#4C51BF] rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                  {user?.username?.charAt(0).toUpperCase()}
-                </div>
+              <Link
+                to="/profile"
+                className="mb-3 flex items-center gap-3 rounded-lg p-1.5 transition-colors hover:bg-blue-50"
+                title="Open profile"
+              >
+                <UserAvatar user={user} showInitial className="h-9 w-9 shrink-0 ring-1 ring-blue-100" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-800 truncate">{user?.username}</p>
+                  <p className="text-sm font-medium text-gray-800 truncate">{user?.full_name || user?.username}</p>
                   <p className="text-xs text-gray-500 truncate">{user?.role_details?.role_name}</p>
                 </div>
-              </div>
+              </Link>
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="mb-2 w-full border-blue-200 text-blue-700 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-800"
+              >
+                <Link to="/profile">
+                  <UserRoundPen className="mr-2 h-4 w-4" />
+                  Edit Profile
+                </Link>
+              </Button>
               <Button
                 onClick={handleLogout}
                 variant="outline"

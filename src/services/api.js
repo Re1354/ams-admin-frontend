@@ -573,6 +573,28 @@ export const authAPI = {
       throw error.response?.data || error.message;
     }
   },
+
+  getProfile: async () => {
+    try {
+      const response = await api.get('/api/users/profile/');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  updateProfile: async (profileData) => {
+    try {
+      const response = await api.patch('/api/users/profile/', profileData, {
+        headers: profileData instanceof FormData
+          ? { 'Content-Type': 'multipart/form-data' }
+          : undefined,
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
 };
 
 // Users API endpoints

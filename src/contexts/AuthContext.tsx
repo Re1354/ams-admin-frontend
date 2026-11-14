@@ -23,7 +23,7 @@ const getMsUntilExpiry = (token: string | null): number => {
   return Math.max(0, payload.exp * 1000 - Date.now());
 };
 
-interface User {
+export interface User {
   id: number;
   username: string;
   email: string;
@@ -60,6 +60,8 @@ interface AuthContextType {
   isLoading: boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
+  refreshProfile: () => Promise<User>;
+  updateProfile: (profileData: FormData | Record<string, unknown>) => Promise<User>;
   isSuperAdmin: boolean;
 }
 
@@ -91,6 +93,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     clearSession();
     setUser(null);
+  };
+
+  const storeUser = (nextUser: User) => {
+    localStorage.setItem('user', JSON.stringify(nextUser));
+    setUser(nextUser);
   };
 
   // Schedule an automatic logout for the exact moment the access token expires,
@@ -161,9 +168,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Store tokens and user data
         localStorage.setItem('access_token', access_token);
         localStorage.setItem('refresh_token', refresh_token);
-        localStorage.setItem('user', JSON.stringify(userData));
-
-        setUser(userData);
+        storeUser(userData);
         scheduleAutoLogout(access_token);
       } else {
         throw new Error(response.message || 'Login failed');
@@ -171,6 +176,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       throw error;
     }
+  };
+
+  const refreshProfile = async () => {
+    const response = await authAPI.getProfile();
+    const nextUser = response?.data as User;
+    if (!nextUser) {
+      throw new Error(response?.message || 'Failed to load profile');
+    }
+    storeUser(nextUser);
+    return nextUser;
+  };
+
+  const updateProfile = async (profileData: FormData | Record<string, unknown>) => {
+    const response = await authAPI.updateProfile(profileData);
+    const nextUser = response?.data as User;
+    if (!nextUser) {
+      throw new Error(response?.message || 'Failed to update profile');
+    }
+    storeUser(nextUser);
+    return nextUser;
   };
 
   const isAuthenticated = !!user;
@@ -182,6 +207,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isLoading,
     login,
     logout,
+    refreshProfile,
+    updateProfile,
     isSuperAdmin,
   };
 

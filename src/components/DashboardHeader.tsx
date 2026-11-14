@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
-import { useLocation } from 'react-router-dom';
-import { Bell, Building2, LogOut, Mail, Menu, Settings, Shield, User } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { Bell, Building2, LogOut, Mail, Menu, Settings, Shield, UserRoundPen } from 'lucide-react';
 import { Button } from './ui/button';
 
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
+import { UserAvatar } from './UserAvatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,6 +52,7 @@ const PAGE_TITLE_FALLBACKS: Record<string, string> = {
   '/all-results': 'All Results',
   '/student-assign-teacher-exam': 'Student Assignment Management',
   '/marks-distribution': 'Marks Distribution Management',
+  '/profile': 'My Profile',
 };
 
 const titleFromPath = (pathname: string) => {
@@ -74,7 +75,7 @@ export function DashboardHeader({}: DashboardHeaderProps) {
   const { toggleSidebar } = useSidebar();
   const { user, logout } = useAuth();
 
-  const displayName = user?.username || 'User';
+  const displayName = user?.full_name || user?.username || 'User';
   const roleName = user?.role_details?.role_name;
   const departmentName = user?.department_details?.department_name;
 
@@ -127,12 +128,11 @@ export function DashboardHeader({}: DashboardHeaderProps) {
                 aria-label="Open user menu"
                 className="flex items-center gap-2 rounded-lg px-1.5 py-1 transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 md:gap-3"
               >
-                <Avatar className="h-9 w-9 bg-white/10 ring-1 ring-white/20 md:h-11 md:w-11">
-                  <AvatarImage src="" alt={displayName} />
-                  <AvatarFallback className="bg-white/15 text-white">
-                    <User className="h-4 w-4 md:h-5 md:w-5" />
-                  </AvatarFallback>
-                </Avatar>
+                <UserAvatar
+                  user={user}
+                  className="h-9 w-9 bg-white/10 ring-1 ring-white/20 md:h-11 md:w-11"
+                  fallbackClassName="bg-white/15 text-white"
+                />
                 <span className="hidden text-sm font-semibold text-white sm:block md:text-base">
                   {roleName || displayName}
                 </span>
@@ -141,12 +141,7 @@ export function DashboardHeader({}: DashboardHeaderProps) {
             <DropdownMenuContent align="end" className="w-72 p-0 sm:w-80">
               {/* Header: large avatar + name + role */}
               <div className="flex flex-col items-center gap-1.5 px-4 pb-4 pt-5">
-                <Avatar className="h-20 w-20 bg-blue-100 ring-4 ring-blue-50">
-                  <AvatarImage src="" alt={displayName} />
-                  <AvatarFallback className="bg-blue-100 text-blue-600">
-                    <User className="h-10 w-10" strokeWidth={1.75} />
-                  </AvatarFallback>
-                </Avatar>
+                <UserAvatar user={user} className="h-20 w-20 bg-blue-100 ring-4 ring-blue-50" />
                 <div className="mt-1 text-base font-semibold text-gray-900 break-words text-center">
                   {displayName}
                 </div>
@@ -184,6 +179,17 @@ export function DashboardHeader({}: DashboardHeaderProps) {
                   </span>
                 </div>
               </div>
+
+              <DropdownMenuSeparator />
+
+              <DropdownMenuItem asChild className="m-2 cursor-pointer rounded-md p-0 focus:bg-transparent">
+                <Link to="/profile" className="flex w-full items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-blue-50">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-600">
+                    <UserRoundPen className="h-4 w-4" />
+                  </span>
+                  <span className="font-medium text-blue-700">Edit Profile</span>
+                </Link>
+              </DropdownMenuItem>
 
               <DropdownMenuSeparator />
 

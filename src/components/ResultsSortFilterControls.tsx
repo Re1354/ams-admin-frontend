@@ -160,8 +160,8 @@ export function ResultsSortFilterControls({
                 </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="latest" className="text-xs">Latest</SelectItem>
-                <SelectItem value="oldest" className="text-xs">Oldest</SelectItem>
+                <SelectItem value="latest" className="text-xs">Newest → Oldest</SelectItem>
+                <SelectItem value="oldest" className="text-xs">Oldest → Newest</SelectItem>
                 <SelectItem value="custom" className="text-xs font-medium text-emerald-700">Custom Date</SelectItem>
               </SelectContent>
             </Select>
