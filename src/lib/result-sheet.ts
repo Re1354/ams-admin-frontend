@@ -197,14 +197,17 @@ export function formatExamTaken(value?: string | null): string {
 // the column header (see `getColumnHeader`) so a table can be shown per cohort.
 export function buildResultSheetRows(
   results: AdmissionResult[],
-  { withDenominator = true }: { withDenominator?: boolean } = {},
+  {
+    withDenominator = true,
+    startSerial = 1,
+  }: { withDenominator?: boolean; startSerial?: number } = {},
 ): ResultSheetRow[] {
   const fmt = (value?: number | null, total?: number | null) =>
     withDenominator ? formatOutOf(value, total) : formatNumber(value);
 
   return results.map((result, index) => ({
     id: result.id,
-    serial: index + 1,
+    serial: startSerial + index,
     applicationSerial: result.student_f_id || "N/A",
     studentName: result.student_full_name || "N/A",
     username: result.student_username || "",

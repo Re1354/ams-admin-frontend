@@ -1293,8 +1293,13 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
 
       // One table per group, each flowing after the previous one. The
       // denominators live in the column headers, which repeat on page breaks.
+      let nextPdfSerial = 1;
       groups.forEach((group, groupIndex) => {
-        const groupRows = buildResultSheetRows(group.results, { withDenominator: false });
+        const groupRows = buildResultSheetRows(group.results, {
+          withDenominator: false,
+          startSerial: nextPdfSerial,
+        });
+        nextPdfSerial += group.results.length;
         let startY =
           groupIndex === 0 ? tableTop : ((doc as any).lastAutoTable?.finalY ?? tableTop) + groupGap;
         if (group.startsDate) {
@@ -1429,6 +1434,7 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
       const XLSX = await import("xlsx");
       const sheetRows: (string | number)[][] = [];
       const dateHeaderRows: number[] = [];
+      let nextExcelSerial = 1;
 
       groups.forEach((group, groupIndex) => {
         if (groupIndex > 0) {
@@ -1442,9 +1448,13 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
           RESULT_SHEET_EXCEL_KEYS.map((key) => getColumnHeader(key, group.denominators)),
         );
 
-        buildResultSheetRows(group.results, { withDenominator: false }).forEach((row) => {
+        buildResultSheetRows(group.results, {
+          withDenominator: false,
+          startSerial: nextExcelSerial,
+        }).forEach((row) => {
           sheetRows.push(RESULT_SHEET_EXCEL_KEYS.map((key) => row[key]));
         });
+        nextExcelSerial += group.results.length;
       });
 
       const worksheet = XLSX.utils.aoa_to_sheet(sheetRows);

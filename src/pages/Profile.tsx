@@ -29,28 +29,11 @@ const getErrorMessage = (error: any) => {
 };
 
 export default function Profile() {
-  const { user, refreshProfile, updateProfile } = useAuth();
+  const { user, updateProfile } = useAuth();
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-
-  useEffect(() => {
-    let mounted = true;
-    refreshProfile()
-      .catch((error) => {
-        if (mounted) toast.error(getErrorMessage(error));
-      })
-      .finally(() => {
-        if (mounted) setIsLoading(false);
-      });
-    return () => {
-      mounted = false;
-    };
-    // Profile refreshes once when the page opens.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -101,14 +84,6 @@ export default function Profile() {
       setIsSaving(false);
     }
   };
-
-  if (isLoading && !user) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center text-slate-500">
-        <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Loading profile…
-      </div>
-    );
-  }
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
