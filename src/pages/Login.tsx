@@ -140,8 +140,8 @@ export function Login() {
                   <button
                     type="button"
                     onClick={() => {
-                      setUsername('s_admin');
-                      setPassword('S_admin@diu123');
+                      setUsername('admin');
+                      setPassword('admin123');
                       toast.success('Super-Admin credentials auto-filled!');
                     }}
                     className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-100/60 hover:bg-indigo-100 px-2.5 py-1 rounded-md transition-colors"
@@ -153,8 +153,8 @@ export function Login() {
 
                 <div
                   onClick={() => {
-                    setUsername('s_admin');
-                    setPassword('S_admin@diu123');
+                    setUsername('admin');
+                    setPassword('admin123');
                     toast.success('Super-Admin credentials auto-filled!');
                   }}
                   className="grid grid-cols-2 gap-2 text-gray-700 bg-white/90 p-2.5 rounded-lg border border-indigo-100 cursor-pointer hover:border-indigo-300 transition-colors"
@@ -162,11 +162,11 @@ export function Login() {
                 >
                   <div>
                     <span className="text-gray-400 block text-[10px] uppercase font-medium">Username</span>
-                    <span className="font-mono text-xs font-semibold text-gray-800">s_admin</span>
+                    <span className="font-mono text-xs font-semibold text-gray-800">admin</span>
                   </div>
                   <div>
                     <span className="text-gray-400 block text-[10px] uppercase font-medium">Password</span>
-                    <span className="font-mono text-xs font-semibold text-gray-800">S_admin@diu123</span>
+                    <span className="font-mono text-xs font-semibold text-gray-800">admin123</span>
                   </div>
                 </div>
                 <p className="text-[10px] text-gray-400 mt-2 text-center">
