@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { Loader2, Eye, EyeOff, User, Lock } from 'lucide-react';
+import { Loader2, Eye, EyeOff, User, Lock, ShieldCheck, Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import logoImage from '../assets/logo.png';
 import toast from 'react-hot-toast';
@@ -128,6 +128,52 @@ export function Login() {
                 )}
               </Button>
             </form>
+
+            {/* Super-Admin Demo Credentials (Super-Admin Only) */}
+            <div className="mt-6 pt-5 border-t border-gray-100">
+              <div className="rounded-xl bg-gradient-to-br from-indigo-50/80 via-blue-50/50 to-white border border-indigo-100/80 p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-2.5">
+                  <span className="font-semibold text-indigo-950 flex items-center gap-1.5 text-xs">
+                    <ShieldCheck className="w-4 h-4 text-indigo-600" />
+                    Super-Admin Demo Credentials
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUsername('s_admin');
+                      setPassword('S_admin@diu123');
+                      toast.success('Super-Admin credentials auto-filled!');
+                    }}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-100/60 hover:bg-indigo-100 px-2.5 py-1 rounded-md transition-colors"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    Auto Fill
+                  </button>
+                </div>
+
+                <div
+                  onClick={() => {
+                    setUsername('s_admin');
+                    setPassword('S_admin@diu123');
+                    toast.success('Super-Admin credentials auto-filled!');
+                  }}
+                  className="grid grid-cols-2 gap-2 text-gray-700 bg-white/90 p-2.5 rounded-lg border border-indigo-100 cursor-pointer hover:border-indigo-300 transition-colors"
+                  title="Click to auto fill"
+                >
+                  <div>
+                    <span className="text-gray-400 block text-[10px] uppercase font-medium">Username</span>
+                    <span className="font-mono text-xs font-semibold text-gray-800">s_admin</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400 block text-[10px] uppercase font-medium">Password</span>
+                    <span className="font-mono text-xs font-semibold text-gray-800">S_admin@diu123</span>
+                  </div>
+                </div>
+                <p className="text-[10px] text-gray-400 mt-2 text-center">
+                  Click 'Auto Fill' or click the box to populate Super-Admin login
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
