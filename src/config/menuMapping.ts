@@ -20,15 +20,20 @@ export const menuToGroupMapping: Record<string, { group: string; order: number }
   'ai question scrapper': { group: 'QUESTION MANAGEMENT', order: 6 },
 
   // EXAM CONTROLS & MAPPING
-  'faculty management': { group: 'EXAM CONTROLS & MAPPING', order: 0 },
-  'faculty': { group: 'EXAM CONTROLS & MAPPING', order: 0 },
-  'department management': { group: 'EXAM CONTROLS & MAPPING', order: 1 },
-  'faculty department mapping': { group: 'EXAM CONTROLS & MAPPING', order: 2 },
-  'subject management': { group: 'EXAM CONTROLS & MAPPING', order: 3 },
-  'subject department mapping': { group: 'EXAM CONTROLS & MAPPING', order: 4 },
-  'subject priority mapping': { group: 'EXAM CONTROLS & MAPPING', order: 5 },
-  'viva rubrics management': { group: 'EXAM CONTROLS & MAPPING', order: 6 },
-  'marks distribution management': { group: 'EXAM CONTROLS & MAPPING', order: 7 },
+  'faculty management': { group: 'EXAM CONTROLS & MAPPING', order: 1 },
+  'faculty': { group: 'EXAM CONTROLS & MAPPING', order: 1 },
+  'department management': { group: 'EXAM CONTROLS & MAPPING', order: 2 },
+  'faculty department mapping': { group: 'EXAM CONTROLS & MAPPING', order: 3 },
+  'subject management': { group: 'EXAM CONTROLS & MAPPING', order: 4 },
+  'subject faculty mapping': { group: 'EXAM CONTROLS & MAPPING', order: 5 },
+  'subject department mapping': { group: 'EXAM CONTROLS & MAPPING', order: 5 },
+  'subject priority mapping': { group: 'EXAM CONTROLS & MAPPING', order: 6 },
+  'viva rubrics management': { group: 'EXAM CONTROLS & MAPPING', order: 7 },
+  'viva rubrics': { group: 'EXAM CONTROLS & MAPPING', order: 7 },
+  'marks distribution management': { group: 'EXAM CONTROLS & MAPPING', order: 8 },
+  'marks distribution': { group: 'EXAM CONTROLS & MAPPING', order: 8 },
+  'report signatories': { group: 'EXAM CONTROLS & MAPPING', order: 9 },
+  'admission report signatories': { group: 'EXAM CONTROLS & MAPPING', order: 9 },
 
   // DEPARTMENTAL CONTROLS
   'student acceptance criteria': { group: 'DEPARTMENTAL CONTROLS', order: 1 },
@@ -40,16 +45,19 @@ export const menuToGroupMapping: Record<string, { group: string; order: number }
   'student assign': { group: 'DEPARTMENTAL CONTROLS', order: 4 },
   'student assign(written)': { group: 'DEPARTMENTAL CONTROLS', order: 4 },
   'override selection': { group: 'DEPARTMENTAL CONTROLS', order: 5 },
+  'results': { group: 'DEPARTMENTAL CONTROLS', order: 6 },
+  'accepted students': { group: 'DEPARTMENTAL CONTROLS', order: 6 },
 
   // FACULTY CONTROLS
   'my schedule': { group: 'FACULTY CONTROLS', order: 1 },
   'viva marks entry': { group: 'FACULTY CONTROLS', order: 2 },
+  'viva marks': { group: 'FACULTY CONTROLS', order: 2 },
   'my students': { group: 'FACULTY CONTROLS', order: 3 },
 
   // ADMISSION OFFICE
   'students': { group: 'ADMISSION OFFICE', order: 1 },
   'referred students from department': { group: 'ADMISSION OFFICE', order: 2 },
-  'results': { group: 'ADMISSION OFFICE', order: 3 },
+  'all results': { group: 'ADMISSION OFFICE', order: 3 },
 
   // USERS & ROLES
   'menu management': { group: 'USERS & ROLES', order: 1 },
