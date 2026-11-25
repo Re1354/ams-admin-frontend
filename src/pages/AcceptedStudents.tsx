@@ -83,6 +83,7 @@ import {
   reportSignatoryAPI,
 } from "../services/api";
 import { StudentAdmissionReportDialog } from "../components/StudentAdmissionReportDialog";
+import { ExamConductBadge } from "../components/ExamConductBadge";
 import PaginationControls, { DEFAULT_PAGINATION, paginationFromDrf } from "../components/PaginationControls";
 import {
   ResultsSortFilterControls,
@@ -2157,6 +2158,7 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
                               <TableHead>Total</TableHead>
                               <TableHead>Status</TableHead>
                               <TableHead>Exam Taken</TableHead>
+                              <TableHead>Exam Conduct</TableHead>
                               <TableHead className="text-center">View</TableHead>
                               <TableHead className="text-center">Download</TableHead>
                             </TableRow>
@@ -2216,6 +2218,9 @@ export function AcceptedStudents({ allowedTabs = ALL_TABS }: AcceptedStudentsPro
                                   </TableCell>
                                   <TableCell className="text-xs text-slate-600 whitespace-nowrap">
                                     {row.examTakenAt || "—"}
+                                  </TableCell>
+                                  <TableCell>
+                                    <ExamConductBadge conduct={result.exam_conduct} />
                                   </TableCell>
                                   <TableCell className="text-center">
                                     <Button

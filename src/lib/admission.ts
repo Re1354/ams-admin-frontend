@@ -1,3 +1,5 @@
+import type { ExamConduct } from "../components/ExamConductBadge";
+
 export interface EffectiveDepartment {
   id: number;
   department_name: string;
@@ -70,6 +72,8 @@ export interface AdmissionResult {
   viva_contribution: number;
   exam_details: AdmissionExamDetails;
   exam_taken_at: string | null;
+  /** Read-only proctoring status; missing on older backends. */
+  exam_conduct?: ExamConduct | null;
   allocated_department?: string | null;
   waiting_for?: string | null;
   eligible_departments?: string[];

@@ -26,6 +26,7 @@ import {
   Sliders,
   Trash2,
   ArrowDownUp,
+  Eye,
 } from 'lucide-react';
 
 // Icon mapping for dynamic menu items
@@ -54,6 +55,7 @@ const iconMap: { [key: string]: any } = {
   'Sliders': Sliders,
   'Trash2': Trash2,
   'ArrowDownUp': ArrowDownUp,
+  'Eye': Eye,
 };
 
 interface MenuItem {

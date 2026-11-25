@@ -50,6 +50,7 @@ export const menuToGroupMapping: Record<string, { group: string; order: number }
   'students': { group: 'ADMISSION OFFICE', order: 1 },
   'referred students from department': { group: 'ADMISSION OFFICE', order: 2 },
   'results': { group: 'ADMISSION OFFICE', order: 3 },
+  'proctoring': { group: 'ADMISSION OFFICE', order: 4 },
 
   // USERS & ROLES
   'menu management': { group: 'USERS & ROLES', order: 1 },
