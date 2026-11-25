@@ -411,13 +411,10 @@ export function ProctoringDashboard() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Proctoring</h1>
-          <p className="text-sm text-gray-600">
-            Camera and screen checks during the written exam. A student is reported after more than 3 counted flags.
-          </p>
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-gray-600">
+          Camera and screen checks during the written exam. A student is reported after more than 3 counted flags.
+        </p>
         <Button type="button" variant="outline" onClick={() => loadSessions()} disabled={isLoading}>
           <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
           Refresh
