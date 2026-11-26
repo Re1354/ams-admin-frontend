@@ -55,7 +55,7 @@ export interface ProctoringSessionRow {
   status: "active" | "finished";
   flag_count: number;
   conduct: ExamConductStatus;
-  /** Taken without camera (support staff code): conduct is "not monitored". */
+  /** No working camera for (part of) the exam: support staff code, or covered/disconnected. Never "clear". */
   camera_off?: boolean;
   admitted: boolean;
   started_at: string;
@@ -198,6 +198,14 @@ export function ProctoringSessionDetail({ sessionId, onClose }: ProctoringSessio
   }, [sessionId]);
 
   const conduct = data ? CONDUCT_STYLES[data.conduct] : null;
+  const cameraBySupport = Boolean(data?.unlock_events.some((event) => event.purpose === "camera"));
+  const cameraCovered = Boolean(data?.flags.some((flag) => flag.code === "CAMERA_OFF"));
+  const cameraText = [
+    cameraCovered ? "Covered or disconnected during the exam" : null,
+    cameraBySupport ? "Off (support staff code)" : null,
+  ]
+    .filter(Boolean)
+    .join("; ");
 
   return (
     <Dialog open={sessionId !== null} onOpenChange={(open) => !open && onClose()}>
@@ -264,10 +272,10 @@ export function ProctoringSessionDetail({ sessionId, onClose }: ProctoringSessio
                   </Badge>
                 ) : null}
               </div>
-              {data.camera_off ? (
+              {data.camera_off || cameraCovered ? (
                 <div className="flex gap-2 sm:col-span-2">
                   <span className="w-36 shrink-0 text-slate-500">Camera</span>
-                  <span className="font-medium text-slate-700">Off (support staff code)</span>
+                  <span className="font-medium text-slate-700">{cameraText || "Off"}</span>
                 </div>
               ) : null}
               <div className="flex gap-2">
@@ -278,7 +286,11 @@ export function ProctoringSessionDetail({ sessionId, onClose }: ProctoringSessio
                 <span className="w-36 text-slate-500">Counted flags</span>
                 <span>
                   <strong>{data.flag_count}</strong>{" "}
-                  <span className="text-slate-500">(reported after more than 3)</span>
+                  <span className="text-slate-500">
+                    {cameraCovered
+                      ? "(reported after more than 1, because the camera was covered or disconnected)"
+                      : "(reported after more than 3)"}
+                  </span>
                 </span>
               </div>
               <div className="flex gap-2">
@@ -352,7 +364,9 @@ export function ProctoringSessionDetail({ sessionId, onClose }: ProctoringSessio
                   {data.unlock_events.map((event) => (
                     <li key={event.id}>
                       <span className="text-slate-500">{formatDateTime(event.created_at)}</span>{" "}
-                      {UNLOCK_PURPOSE_LABELS[event.purpose] || event.purpose}
+                      <span className={event.purpose === "camera" ? "text-base font-semibold text-red-600" : undefined}>
+                        {UNLOCK_PURPOSE_LABELS[event.purpose] || event.purpose}
+                      </span>
                     </li>
                   ))}
                 </ul>

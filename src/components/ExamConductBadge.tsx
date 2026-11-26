@@ -10,11 +10,11 @@ export interface ExamConduct {
   status: ExamConductStatus;
   flag_count: number;
   session_id: number | null;
-  /** The exam was taken without camera (support staff code), so it is "not monitored". */
+  /** No working camera for (part of) the exam: support staff code, or covered/disconnected. */
   camera_off?: boolean;
 }
 
-export const NO_CAMERA_TEXT = "Took the exam without camera (support staff code)";
+export const NO_CAMERA_TEXT = "Camera was off during the exam (support staff code, or covered/disconnected)";
 
 export const PROCTORING_LINK = "/proctoring";
 

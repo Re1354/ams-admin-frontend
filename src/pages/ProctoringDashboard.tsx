@@ -45,6 +45,11 @@ import PaginationControls, {
 } from "../components/PaginationControls";
 import { CONDUCT_STYLES, NO_CAMERA_TEXT, flagCountLabel } from "../components/ExamConductBadge";
 import {
+  DEFAULT_ORDERING,
+  ProctoringSortControls,
+  type SessionOrdering,
+} from "../components/ProctoringSortControls";
+import {
   ProctoringSessionDetail,
   examLabel,
   formatDateTime,
@@ -143,6 +148,7 @@ export function ProctoringDashboard() {
   const [conductFilter, setConductFilter] = useState<ConductFilter>("all");
   const [searchText, setSearchText] = useState("");
   const [search, setSearch] = useState("");
+  const [ordering, setOrdering] = useState<SessionOrdering>(DEFAULT_ORDERING);
   const [page, setPage] = useState(1);
 
   const [rows, setRows] = useState<ProctoringSessionRow[]>([]);
@@ -202,13 +208,13 @@ export function ProctoringDashboard() {
   }, [searchText]);
 
   const queryParams = useMemo(() => {
-    const params: Record<string, string | number> = { page };
+    const params: Record<string, string | number> = { page, ordering };
     if (semester !== ALL) params.semester = semester;
     if (departmentId !== ALL) params.department_id = departmentId;
     if (conductFilter !== "all") params.conduct = conductFilter;
     if (search) params.search = search;
     return params;
-  }, [page, semester, departmentId, conductFilter, search]);
+  }, [page, semester, departmentId, conductFilter, search, ordering]);
 
   // Only a response for the current filters may update the table (a quiet poll can race a filter change).
   const latestQueryKey = useRef("");
@@ -344,6 +350,7 @@ export function ProctoringDashboard() {
     setConductFilter("all");
     setSearchText("");
     setSearch("");
+    setOrdering(DEFAULT_ORDERING);
     setPage(1);
   };
 
@@ -414,7 +421,8 @@ export function ProctoringDashboard() {
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-gray-600">
-          Camera and screen checks during the written exam. A student is reported after more than 3 counted flags.
+          Camera and screen checks during the written exam. Reported after more than 3 counted flags (2 if the camera
+          was covered).
         </p>
         <Button type="button" variant="outline" onClick={() => loadSessions()} disabled={isLoading}>
           <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
@@ -456,7 +464,7 @@ export function ProctoringDashboard() {
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Reported</p>
               <p className="mt-1 text-2xl font-bold text-red-700">{summary.reported}</p>
-              <p className="mt-0.5 text-xs text-slate-500">More than 3 counted flags</p>
+              <p className="mt-0.5 text-xs text-slate-500">More than 3 counted flags (2 if camera covered)</p>
             </div>
             <div className="rounded-xl bg-red-100 p-3 text-red-700">
               <ShieldAlert className="h-6 w-6" />
@@ -549,6 +557,14 @@ export function ProctoringDashboard() {
               </div>
             </div>
           </div>
+
+          <ProctoringSortControls
+            ordering={ordering}
+            onOrderingChange={(value) => {
+              setOrdering(value);
+              setPage(1);
+            }}
+          />
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
