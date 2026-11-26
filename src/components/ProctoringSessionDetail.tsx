@@ -54,7 +54,9 @@ export interface ProctoringSessionRow {
   exam: ProctoringExam;
   status: "active" | "finished";
   flag_count: number;
-  conduct: Exclude<ExamConductStatus, "not_monitored">;
+  conduct: ExamConductStatus;
+  /** Taken without camera (support staff code): conduct is "not monitored". */
+  camera_off?: boolean;
   admitted: boolean;
   started_at: string;
   ended_at: string | null;
@@ -262,6 +264,12 @@ export function ProctoringSessionDetail({ sessionId, onClose }: ProctoringSessio
                   </Badge>
                 ) : null}
               </div>
+              {data.camera_off ? (
+                <div className="flex gap-2 sm:col-span-2">
+                  <span className="w-36 shrink-0 text-slate-500">Camera</span>
+                  <span className="font-medium text-slate-700">Off (support staff code)</span>
+                </div>
+              ) : null}
               <div className="flex gap-2">
                 <span className="w-36 text-slate-500">Session</span>
                 <span>{data.status === "active" ? "In progress" : "Finished"}</span>

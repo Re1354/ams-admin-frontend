@@ -43,7 +43,7 @@ import PaginationControls, {
   paginationFromDrf,
   type PaginationMeta,
 } from "../components/PaginationControls";
-import { CONDUCT_STYLES, flagCountLabel } from "../components/ExamConductBadge";
+import { CONDUCT_STYLES, NO_CAMERA_TEXT, flagCountLabel } from "../components/ExamConductBadge";
 import {
   ProctoringSessionDetail,
   examLabel,
@@ -60,13 +60,14 @@ const POLL_MS = 10000;
 const ALL = "all";
 const MIN_CODE_LENGTH = 6;
 
-type ConductFilter = "all" | "live" | "reported" | "clear" | "banned";
+type ConductFilter = "all" | "live" | "reported" | "clear" | "not_monitored" | "banned";
 
 const CONDUCT_FILTERS: { value: ConductFilter; label: string }[] = [
   { value: "all", label: "All statuses" },
   { value: "live", label: "Live now" },
   { value: "reported", label: "Reported" },
   { value: "clear", label: "Clear" },
+  { value: "not_monitored", label: "Not monitored (no camera)" },
   { value: "banned", label: "Banned" },
 ];
 
@@ -672,7 +673,11 @@ export function ProctoringDashboard() {
                           </TableCell>
                           <TableCell>
                             <div className="flex flex-wrap items-center gap-1">
-                              <Badge variant="outline" className={style.className}>
+                              <Badge
+                                variant="outline"
+                                className={style.className}
+                                title={row.camera_off ? NO_CAMERA_TEXT : undefined}
+                              >
                                 {style.label}
                               </Badge>
                               {row.admitted ? (

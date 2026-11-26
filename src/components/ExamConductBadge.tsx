@@ -10,7 +10,11 @@ export interface ExamConduct {
   status: ExamConductStatus;
   flag_count: number;
   session_id: number | null;
+  /** The exam was taken without camera (support staff code), so it is "not monitored". */
+  camera_off?: boolean;
 }
+
+export const NO_CAMERA_TEXT = "Took the exam without camera (support staff code)";
 
 export const PROCTORING_LINK = "/proctoring";
 
@@ -51,7 +55,12 @@ export function ExamConductBadge({ conduct, linkToReport = true }: ExamConductBa
     conduct && conduct.status in CONDUCT_STYLES ? conduct.status : "not_monitored";
   const style = CONDUCT_STYLES[status];
   const flagCount = Number(conduct?.flag_count ?? 0);
-  const title = status === "not_monitored" ? "No proctoring session" : flagCountLabel(flagCount);
+  const title =
+    status !== "not_monitored"
+      ? flagCountLabel(flagCount)
+      : conduct?.camera_off
+        ? `${NO_CAMERA_TEXT}, ${flagCountLabel(flagCount)}`
+        : "No proctoring session";
 
   const badge = (
     <Badge variant="outline" className={`whitespace-nowrap ${style.className}`} title={title}>
