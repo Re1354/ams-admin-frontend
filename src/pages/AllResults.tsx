@@ -54,6 +54,7 @@ import PaginationControls, { DEFAULT_PAGINATION, paginationFromDrf } from '../co
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
 import toast from 'react-hot-toast';
+import { ExamConductBadge, type ExamConduct } from '../components/ExamConductBadge';
 
 interface ChoiceItem {
   department_id: number;
@@ -104,6 +105,7 @@ interface AdmissionResult {
   eligible_departments?: string[];
   waiting_for?: string | null;
   exam_taken_at?: string | null;
+  exam_conduct?: ExamConduct | null;
   created_at: string;
   configuration?: number;
 }
@@ -1299,6 +1301,8 @@ const AllResults: React.FC = () => {
                     <TableHead className="text-center">Status</TableHead>
                     {/* 15. Exam Taken */}
                     <TableHead className="text-center whitespace-nowrap">Exam Taken</TableHead>
+                    {/* 15b. Exam Conduct (proctoring) */}
+                    <TableHead className="text-center whitespace-nowrap">Exam Conduct</TableHead>
                     {/* 16. View */}
                     <TableHead className="w-12 text-center">View</TableHead>
                     {/* 17. Download */}
@@ -1522,6 +1526,11 @@ const AllResults: React.FC = () => {
                             : result.created_at
                             ? new Date(result.created_at).toLocaleDateString()
                             : '—'}
+                        </TableCell>
+
+                        {/* 15b. Exam Conduct (proctoring) */}
+                        <TableCell className="text-center">
+                          <ExamConductBadge conduct={result.exam_conduct} />
                         </TableCell>
 
                         {/* 16. View */}

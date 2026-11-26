@@ -1906,4 +1906,82 @@ export const admissionResultsAPI = {
   },
 };
 
+// Proctoring menu (sessions, reports, ban/unban, support unlock code)
+export const proctoringAPI = {
+  listSessions: async (params = {}) => {
+    try {
+      const response = await api.get('/api/proctoring/admin/sessions', { params });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  getSession: async (sessionId) => {
+    try {
+      const response = await api.get(`/api/proctoring/admin/sessions/${sessionId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Snapshot photo of a flag, as a Blob (shown through an object URL)
+  getSnapshotBlob: async (flagId) => {
+    try {
+      const response = await api.get(`/api/proctoring/admin/flags/${flagId}/snapshot`, {
+        responseType: 'blob',
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  getSummary: async () => {
+    try {
+      const response = await api.get('/api/proctoring/admin/summary');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  ban: async (sessionIds, reason) => {
+    try {
+      const response = await api.post('/api/proctoring/admin/ban', { session_ids: sessionIds, reason });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  unban: async (sessionIds, reason) => {
+    try {
+      const response = await api.post('/api/proctoring/admin/unban', { session_ids: sessionIds, reason });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  getUnlockCode: async () => {
+    try {
+      const response = await api.get('/api/proctoring/admin/unlock-code');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  setUnlockCode: async (code) => {
+    try {
+      const response = await api.post('/api/proctoring/admin/unlock-code', { code });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+};
+
 export default api;
