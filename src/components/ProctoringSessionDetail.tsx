@@ -200,7 +200,12 @@ export function ProctoringSessionDetail({ sessionId, onClose }: ProctoringSessio
   const conduct = data ? CONDUCT_STYLES[data.conduct] : null;
   const cameraBySupport = Boolean(data?.unlock_events.some((event) => event.purpose === "camera"));
   const cameraCovered = Boolean(data?.flags.some((flag) => flag.code === "CAMERA_OFF"));
+  // The watcher records why the camera could not start (no camera, permission blocked, ...).
+  const cameraProblem = data?.flags
+    .map((flag) => (flag.code === "PROCTORING_OFFLINE" ? flag.detail?.camera : undefined))
+    .find((value): value is string => typeof value === "string" && value.length > 0);
   const cameraText = [
+    cameraProblem ? `Continued without camera (${cameraProblem})` : null,
     cameraCovered ? "Covered or disconnected during the exam" : null,
     cameraBySupport ? "Off (support staff code)" : null,
   ]
